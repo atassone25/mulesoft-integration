@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from google.adk.agents import Agent
 
-from . import prompt
+from teams_agent.prompt import OPPORTUNITY_PROMPT
 
 ADK_MODEL = os.getenv("MODEL", "gemini-2.0-flash")
 
@@ -27,5 +27,5 @@ opportunity_agent = Agent(
     model=ADK_MODEL,
     name="opportunity_agent",
     description="Evaluate business offers and log valuable opportunities",
-    instruction=prompt.OPPORTUNITY_PROMPT,
+    instruction=OPPORTUNITY_PROMPT,
 )

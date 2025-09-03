@@ -4,7 +4,7 @@ import os
 from google.adk.agents import Agent
 from google.adk.tools import ToolContext, FunctionTool
 
-from . import prompt
+from teams_agent.prompt import CONTEXTUALIZED_OFFER_PROMPT
 
 ADK_MODEL = os.getenv("MODEL", "gemini-2.0-flash")
 
@@ -42,6 +42,6 @@ contextualized_offer_agent = Agent(
     model=ADK_MODEL,
     name="contextualized_offer_agent", 
     description="Generate contextualized business offers based on user history, products, and demands",
-    instruction=prompt.CONTEXTUALIZED_OFFER_PROMPT,
+    instruction=CONTEXTUALIZED_OFFER_PROMPT,
     tools=[read_context_tool_instance]
 )
