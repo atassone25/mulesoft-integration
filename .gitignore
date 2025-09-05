@@ -14,3 +14,6 @@ htmlcov/
 .idea/
 .vscode/
 *.log
+
+deploy.py
+deploy-template.py
