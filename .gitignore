@@ -15,5 +15,7 @@ htmlcov/
 .vscode/
 *.log
 
+local
+
 deploy.py
 deploy-template.py
