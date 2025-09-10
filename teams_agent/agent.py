@@ -7,11 +7,17 @@
 from __future__ import annotations
 
 import os
+import logging
 from google.adk.agents import Agent
 from google.adk.memory import InMemoryMemoryService, VertexAiMemoryBankService
 
 from . import prompt
 from .sub_agents.contextualized_offer.agent import contextualized_offer_agent
+from .logging_config import setup_adk_logging, log_agent_interaction
+
+# Initialize logging for the agent system
+setup_adk_logging(level=os.getenv("LOG_LEVEL", "INFO"))
+logger = logging.getLogger('coordinator_agent')
 
 
 # ---- Memory service (defaults to in-memory; enable Vertex via env vars) ----

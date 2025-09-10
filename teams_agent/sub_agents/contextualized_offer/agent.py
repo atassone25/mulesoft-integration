@@ -3,18 +3,19 @@
 import os
 from google.adk.agents import Agent
 from teams_agent.prompt import CONTEXTUALIZED_OFFER_PROMPT
-from teams_agent.sub_agents.contextualized_offer.buscar_historico_tool import (
-    buscar_historico_tool_instance,
+from teams_agent.tools.salesforce_tools import (
+    buscar_historico_tool,
+    buscar_produto_tool,
+    # oportunidades_tool - can be added when needed
 )
 
 ADK_MODEL = os.getenv("MODEL", "gemini-2.0-flash")
 
 
-
 contextualized_offer_agent = Agent(
     model=ADK_MODEL,
     name="contextualized_offer_agent",
-    description="Generate contextualized business offers using external client history via A2A",
+    description="Generate contextualized business offers using external client history and product search",
     instruction=CONTEXTUALIZED_OFFER_PROMPT,
-    tools=[buscar_historico_tool_instance],
+    tools=[buscar_historico_tool, buscar_produto_tool],
 )
