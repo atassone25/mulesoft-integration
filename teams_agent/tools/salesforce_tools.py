@@ -18,8 +18,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Get logger from central configuration
-logger = logging.getLogger('salesforce_tools')
+# Standard logging for tools
+import logging
+logger = logging.getLogger(__name__)
 
 
 class SalesforceClient:
@@ -44,7 +45,6 @@ class SalesforceClient:
     
     def get_access_token(self) -> bool:
         """Get Salesforce access token."""
-        logger.info("🔐 Authenticating with Salesforce...")
         payload = {
             "grant_type": "client_credentials",
             "client_id": self.client_id,
@@ -56,27 +56,17 @@ class SalesforceClient:
             response.raise_for_status()
             token_data = response.json()
             self.access_token = token_data.get("access_token")
-            success = bool(self.access_token)
-            if success:
-                logger.info("✅ Salesforce authentication successful")
-            else:
-                logger.error("❌ Failed to get access token from Salesforce")
-            return success
-        except Exception as e:
-            logger.error(f"❌ Salesforce authentication failed: {e}")
+            return bool(self.access_token)
+        except Exception:
             return False
     
     def start_session(self, agent_type: str) -> bool:
         """Start session with specified Salesforce agent."""
-        logger.info(f"🚀 Starting session for {agent_type} agent...")
-        
         if not self.access_token or agent_type not in self.agent_ids:
-            logger.error(f"❌ Cannot start session: missing token or invalid agent type '{agent_type}'")
             return False
             
         agent_id = self.agent_ids[agent_type]
         if not agent_id:
-            logger.error(f"❌ No agent ID configured for '{agent_type}'")
             return False
             
         url = f"{self.base_url}/agents/{agent_id}/sessions"
@@ -99,21 +89,14 @@ class SalesforceClient:
             session_id = session_data.get("sessionId")
             if session_id:
                 self.sessions[agent_type] = session_id
-                logger.info(f"✅ Session started for {agent_type}: {session_id}")
                 return True
-            else:
-                logger.error(f"❌ No session ID returned for {agent_type}")
-                return False
-        except Exception as e:
-            logger.error(f"❌ Failed to start session for {agent_type}: {e}")
+            return False
+        except Exception:
             return False
     
     def send_message(self, agent_type: str, message: str) -> Optional[str]:
         """Send message to specified Salesforce agent."""
-        logger.info(f"📤 Sending message to {agent_type}: {message[:100]}{'...' if len(message) > 100 else ''}")
-        
         if not self.access_token or agent_type not in self.sessions:
-            logger.error(f"❌ Cannot send message: missing token or no session for {agent_type}")
             return None
             
         session_id = self.sessions[agent_type]
@@ -138,14 +121,9 @@ class SalesforceClient:
             
             messages = response_data.get("messages", [])
             if messages and len(messages) > 0:
-                agent_response = messages[0].get("message", "")
-                logger.info(f"📥 Response from {agent_type} ({len(agent_response)} chars): {agent_response[:200]}{'...' if len(agent_response) > 200 else ''}")
-                return agent_response
-            else:
-                logger.warning(f"⚠️ No messages in response from {agent_type}")
-                return None
-        except Exception as e:
-            logger.error(f"❌ Failed to send message to {agent_type}: {e}")
+                return messages[0].get("message", "")
+            return None
+        except Exception:
             return None
     
     def call_agent(self, agent_type: str, query: str) -> Optional[str]:
@@ -171,14 +149,14 @@ async def buscar_historico(query: str) -> str:
     Returns:
         Client history response from Salesforce agent
     """
-    logger.info(f"🔍 [BUSCAR_HISTORICO] User query: {query}")
-    
     text = (query or "").strip()
     if not text:
-        logger.warning("⚠️ [BUSCAR_HISTORICO] Empty query received")
         return "Informe o nome do cliente ou CNPJ para buscar o histórico."
 
     try:
+        # Log tool usage
+        logger.info(f"🔧 TOOL: buscar_historico({text[:50]}{'...' if len(text) > 50 else ''})")
+        
         client = SalesforceClient()
         response = await asyncio.get_event_loop().run_in_executor(
             None, 
@@ -188,14 +166,11 @@ async def buscar_historico(query: str) -> str:
         )
         
         if response:
-            logger.info(f"✅ [BUSCAR_HISTORICO] Success - Response length: {len(response)} chars")
             return response
         else:
-            logger.error("❌ [BUSCAR_HISTORICO] No response from Salesforce agent")
             return "Não foi possível obter o histórico do cliente. Verifique as credenciais e tente novamente."
             
     except Exception as e:
-        logger.error(f"❌ [BUSCAR_HISTORICO] Error: {str(e)}")
         return f"Erro ao consultar histórico do cliente: {str(e)}"
 
 
@@ -209,14 +184,13 @@ async def buscar_produto(query: str) -> str:
     Returns:
         Product search results from Salesforce agent
     """
-    logger.info(f"🛍️ [BUSCAR_PRODUTO] User query: {query}")
-    
     text = (query or "").strip()
     if not text:
-        logger.warning("⚠️ [BUSCAR_PRODUTO] Empty query received")
         return "Informe o nome do produto ou características para buscar."
 
     try:
+        logger.info(f"🔧 TOOL: buscar_produto({text[:50]}{'...' if len(text) > 50 else ''})")
+        
         client = SalesforceClient()
         response = await asyncio.get_event_loop().run_in_executor(
             None, 
@@ -226,14 +200,11 @@ async def buscar_produto(query: str) -> str:
         )
         
         if response:
-            logger.info(f"✅ [BUSCAR_PRODUTO] Success - Response length: {len(response)} chars")
             return response
         else:
-            logger.error("❌ [BUSCAR_PRODUTO] No response from Salesforce agent")
             return "Não foi possível encontrar produtos. Verifique os critérios de busca e tente novamente."
             
     except Exception as e:
-        logger.error(f"❌ [BUSCAR_PRODUTO] Error: {str(e)}")
         return f"Erro ao buscar produtos: {str(e)}"
 
 
@@ -247,14 +218,13 @@ async def oportunidades(query: str) -> str:
     Returns:
         Opportunity management response from Salesforce agent
     """
-    logger.info(f"💼 [OPORTUNIDADES] User query: {query}")
-    
     text = (query or "").strip()
     if not text:
-        logger.warning("⚠️ [OPORTUNIDADES] Empty query received")
         return "Informe os detalhes da oportunidade (criar, atualizar, ou consultar)."
 
     try:
+        logger.info(f"🔧 TOOL: oportunidades({text[:50]}{'...' if len(text) > 50 else ''})")
+        
         client = SalesforceClient()
         response = await asyncio.get_event_loop().run_in_executor(
             None, 
@@ -264,14 +234,11 @@ async def oportunidades(query: str) -> str:
         )
         
         if response:
-            logger.info(f"✅ [OPORTUNIDADES] Success - Response length: {len(response)} chars")
             return response
         else:
-            logger.error("❌ [OPORTUNIDADES] No response from Salesforce agent")
             return "Não foi possível processar a solicitação de oportunidade. Tente novamente."
             
     except Exception as e:
-        logger.error(f"❌ [OPORTUNIDADES] Error: {str(e)}")
         return f"Erro ao gerenciar oportunidades: {str(e)}"
 
 
