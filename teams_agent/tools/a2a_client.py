@@ -435,7 +435,7 @@ class SalesforceA2AClient:
         self.agents = {
             "buscar_historico": A2AClient(
                 url=os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO", 
-                            "https://agentforce-b2b-fv3b5q.3ch7y1.usa-e1.cloudhub.io/oportunidade/agentforce-agent"),
+                            "https://agentforce-b2b-fv3b5q.3ch7y1.usa-e1.cloudhub.io/historico/historico"),
                 auth_token=None  # We'll use Basic auth in headers instead
             ),
             "buscar_produto": A2AClient(
