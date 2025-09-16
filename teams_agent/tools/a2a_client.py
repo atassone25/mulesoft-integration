@@ -423,8 +423,8 @@ class SalesforceA2AClient:
     def __init__(self):
         """Initialize Salesforce A2A client with configuration."""
         # Get configuration from environment
-        self.auth_username = os.getenv("A2A_AUTH_USERNAME", "agentforce_dev")
-        self.auth_password = os.getenv("A2A_AUTH_PASSWORD", "9229e770-767c-417b-a0b0-f0741243c589")
+        self.auth_username = os.getenv("A2A_AUTH_USERNAME")
+        self.auth_password = os.getenv("A2A_AUTH_PASSWORD")
         
         # Create auth token for Basic authentication (not Bearer)
         auth_string = f"{self.auth_username}:{self.auth_password}"
@@ -434,18 +434,15 @@ class SalesforceA2AClient:
         # Salesforce A2A agent endpoints - use Basic auth instead of Bearer
         self.agents = {
             "buscar_historico": A2AClient(
-                url=os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO", 
-                            "https://agentforce-b2b-fv3b5q.3ch7y1.usa-e1.cloudhub.io/historico/historico"),
+                url=os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO"),
                 auth_token=None  # We'll use Basic auth in headers instead
             ),
             "buscar_produto": A2AClient(
-                url=os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_PRODUTO", 
-                            "https://agentforce-b2b-fv3b5q.3ch7y1.usa-e1.cloudhub.io/produtos/busca-produtos"),
+                url=os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_PRODUTO"),
                 auth_token=None  # We'll use Basic auth in headers instead
             ),
             "oportunidades": A2AClient(
-                url=os.getenv("SALESFORCE_A2A_AGENT_OPORTUNIDADES",
-                            "https://agentforce-b2b-fv3b5q.3ch7y1.usa-e1.cloudhub.io/oportunidade/agentforce-agent"),
+                url=os.getenv("SALESFORCE_A2A_AGENT_OPORTUNIDADES"),
                 auth_token=None  # We'll use Basic auth in headers instead
             )
         }

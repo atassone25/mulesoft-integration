@@ -2,13 +2,20 @@
 import requests
 import json
 import base64
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def test_historico_compras():
     """Test the purchase history skill"""
-    # Endpoint and credentials
-    url = "https://agentforce-b2b-fv3b5q.3ch7y1.usa-e1.cloudhub.io/historico/historico"
-    username = "agentforce_dev"
-    password = "9229e770-767c-417b-a0b0-f0741243c589"
+    # Endpoint and credentials from environment
+    url = os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO")
+    username = os.getenv("A2A_AUTH_USERNAME")
+    password = os.getenv("A2A_AUTH_PASSWORD")
+    
+    if not all([url, username, password]):
+        raise ValueError("Missing required environment variables: SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO, A2A_AUTH_USERNAME, A2A_AUTH_PASSWORD")
     
     # Create auth header
     auth_token = base64.b64encode(f"{username}:{password}".encode()).decode()
@@ -51,10 +58,13 @@ def test_historico_compras():
 
 def test_oportunidades_perdidas():
     """Test the lost opportunities skill"""
-    # Endpoint and credentials
-    url = "https://agentforce-b2b-fv3b5q.3ch7y1.usa-e1.cloudhub.io/historico/historico"
-    username = "agentforce_dev"
-    password = "9229e770-767c-417b-a0b0-f0741243c589"
+    # Endpoint and credentials from environment
+    url = os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO")
+    username = os.getenv("A2A_AUTH_USERNAME")
+    password = os.getenv("A2A_AUTH_PASSWORD")
+    
+    if not all([url, username, password]):
+        raise ValueError("Missing required environment variables: SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO, A2A_AUTH_USERNAME, A2A_AUTH_PASSWORD")
     
     # Create auth header
     auth_token = base64.b64encode(f"{username}:{password}".encode()).decode()
