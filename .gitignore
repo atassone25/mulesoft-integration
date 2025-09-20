@@ -16,3 +16,4 @@ htmlcov/
 *.log
 
 local
+agents_metadata.json
