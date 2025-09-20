@@ -48,12 +48,22 @@ poetry run adk web -v --memory_service_uri="agentengine://4388410391198171136"
 
 ## Architecture
 
-- **Coordinator Agent**: Main agent that coordinates decisions and team communication
-- **Contextualized Offer Agent**: Generates business offers using A2A-enabled Salesforce tools
+### Multi-Agent System
+- **Orchestrator Agent**: Main coordinator that presents services and routes requests to specialized agents
+- **Contextualized Offer Agent**: Generates personalized business offers requiring client name, strategy, and investment amount
+- **Opportunity Agent**: Handles opportunity registration and management in Salesforce
+
+### Available Services
+1. **Service1**: General consultation and information services
+2. **Register Opportunity**: Register new business opportunities in the system
+3. **Contextualized Offer**: Generate personalized business offers based on client data and strategy
+
+### Tools
 - **A2A Salesforce Tools**: 
-  - `buscar_historico`: Get client history via A2A protocol
-  - `buscar_produto`: Search products via A2A protocol
-  - `oportunidades`: Manage opportunities via A2A protocol
+  - `buscar_produto`: Search and verify products via A2A protocol (used by Contextualized Offer Agent)
+  - `oportunidades`: Manage opportunities via A2A protocol (used by Opportunity Agent)
+- **Data and AI Tool**:
+  - `data_and_ai`: Returns available Globo products (Globo Reporter, Jornal Nacional, Futebol)
 
 ## Migration from Legacy API
 

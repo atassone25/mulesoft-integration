@@ -1,6 +1,6 @@
 Test endpoint on cloudshell
 
-curl -X POST "https://us-central1-aiplatform.googleapis.com/v1/projects/gglobo-agentsb2b-hdg-dev/locations/us-central1/reasoningEngines/4388410391198171136:query" \
+curl -X POST "https://us-central1-aiplatform.googleapis.com/v1/projects/gglobo-agentsb2b-hdg-dev/locations/us-central1/reasoningEngines/1993163892506755072:query" \
 -H "Authorization: bearer $(gcloud auth print-identity-token)" \
 -H "Content-Type: application/json" \
 -d '{

@@ -35,7 +35,7 @@ def test_historico_compras():
             "contextId": "test-123",
             "message": {
                 "role": "user",
-                "parts": [{"kind": "text", "text": "Mostrar histórico de compras do cliente FISK SCHOOLS"}],
+                "parts": [{"kind": "text", "text": "histórico de mídia da Nova Casas Bahia"}],
                 "contextId": "test-123",
                 "messageId": "msg-456"
             },

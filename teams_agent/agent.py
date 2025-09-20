@@ -72,23 +72,13 @@ ADK_MODEL = os.getenv("MODEL", "gemini-2.0-flash")
 
 SUB_AGENTS = [contextualized_offer_agent]
 
-# Optional: include additional sub-agents if present
+# Include opportunity agent
 try:
-    from .sub_agents.opportunity.agent import opportunity_agent  # noqa: F401
-    SUB_AGENTS.append(opportunity_agent)  # type: ignore[name-defined]
-except Exception:
-    pass
-
-# Include A2A router agent for proper A2A protocol integration
-try:
-    from .sub_agents.a2a_router_agent import a2a_router_agent
-    SUB_AGENTS.append(a2a_router_agent)
-    logger.info("✅ Added A2A Router Agent to coordinator")
+    from .sub_agents.opportunity.agent import opportunity_agent
+    SUB_AGENTS.append(opportunity_agent)
+    logger.info("✅ Added Opportunity Agent to coordinator")
 except Exception as e:
-    logger.warning(f"⚠️ Could not load A2A Router Agent: {e}")
-
-# Salesforce A2A tools are now integrated directly into contextualized_offer_agent
-# No separate sub-agent needed
+    logger.warning(f"⚠️ Could not load Opportunity Agent: {e}")
 
 
 # ---- Coordinator (root) agent ----
