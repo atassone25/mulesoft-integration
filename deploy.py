@@ -19,6 +19,9 @@ PROJECT_ID = "gglobo-agentsb2b-hdg-dev"
 LOCATION = "us-central1"
 STAGING_BUCKET = "gs://b2b-dev-vertex-agents"
 
+# Set environment variable for Cloud Trace
+os.environ.setdefault("GOOGLE_CLOUD_PROJECT", PROJECT_ID)
+
 def create_simplified_agent():
     """Create a simplified version of the agent for deployment"""
     from google.adk.agents import Agent
@@ -69,21 +72,34 @@ def main():
         logger.info(f"✓ Agent created: {agent.name}")
         logger.info(f"  Description: {agent.description}")
         
-        # Step 3: Deploy using Agent Engine
+        # Step 3: Create ADK App with Cloud Trace enabled
+        logger.info("Creating ADK App with Cloud Trace enabled...")
+        from vertexai.preview import reasoning_engines
+        
+        adk_app = reasoning_engines.AdkApp(
+            agent=agent,
+            enable_tracing=True,
+        )
+        logger.info("✓ ADK App created with Cloud Trace enabled")
+        
+        # Step 4: Deploy using Agent Engine
         logger.info("Deploying to Agent Engine...")
         logger.info("This may take several minutes...")
         
         from vertexai import agent_engines
         
         remote_app = agent_engines.create(
-            agent_engine=agent,
+            agent_engine=adk_app,
             display_name="Accenture-Mulesoft Teams Agent",
-            description="Multi-agent system for business opportunities using ADK - deployed to staging",
+            description="Multi-agent system for business opportunities using ADK - deployed to staging with Cloud Trace",
             requirements=[
                 "google-cloud-aiplatform[adk,agent_engines]",
                 "google-adk>=1.12.0",
                 "cloudpickle",
-                "pydantic"
+                "pydantic",
+                "opentelemetry-api",
+                "opentelemetry-sdk",
+                "opentelemetry-exporter-gcp-trace"
             ]
         )
         
@@ -98,6 +114,7 @@ def main():
         print(f"Project: {PROJECT_ID}")
         print(f"Location: {LOCATION}")
         print(f"Staging Bucket: {STAGING_BUCKET}")
+        print(f"Cloud Trace: ✅ ENABLED")
         print("="*70)
         
         # Test the deployed agent
@@ -150,8 +167,9 @@ if __name__ == "__main__":
         print(f"   {deployed_app.resource_name}")
         print(f"\n💡 Next steps:")
         print(f"   1. Test your agent in the Vertex AI console")
-        print(f"   2. Once working, you can update it with the full functionality")
-        print(f"   3. The staging bucket contains your deployment artifacts")
+        print(f"   2. View traces in Cloud Trace: https://console.cloud.google.com/traces/list?project={PROJECT_ID}")
+        print(f"   3. Once working, you can update it with the full functionality")
+        print(f"   4. The staging bucket contains your deployment artifacts")
     else:
         print(f"\n❌ Deployment failed. Check the logs above for details.")
         print(f"   Common issues:")

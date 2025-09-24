@@ -74,7 +74,7 @@ def test_buscar_produto():
             "contextId": context_id,
             "message": {
                 "role": "user",
-                "parts": [{"kind": "text", "text": "Buscar produtos de tecnologia"}],
+                "parts": [{"kind": "text", "text": "Buscar conteúdo de JN o Jornal Nacional"}],
                 "contextId": context_id,
                 "messageId": message_id
             },

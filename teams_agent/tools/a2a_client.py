@@ -418,6 +418,7 @@ class SalesforceA2AClient:
     
     This class provides a higher-level interface for communicating with
     Salesforce-specific A2A agents for different business functions.
+    Maintains conversation context across multiple interactions.
     """
     
     def __init__(self):
@@ -449,30 +450,159 @@ class SalesforceA2AClient:
         
         # Store the Basic auth header for use in requests
         self.basic_auth_header = f'Basic {auth_token}'
+        
+        # Context management for maintaining conversation state
+        # Each agent has its own context ID that persists across calls
+        self.context_ids = {
+            "buscar_historico": None,
+            "buscar_produto": None, 
+            "oportunidades": None
+        }
+        
+        # Track context creation time for expiration management
+        import time
+        self.context_timestamps = {
+            "buscar_historico": None,
+            "buscar_produto": None,
+            "oportunidades": None
+        }
+        self.context_timeout_hours = 2  # Contexts expire after 2 hours
+    
+    def _generate_context_id(self) -> str:
+        """Generate a unique context ID with timestamp (like SalesforceAgentManager)."""
+        import time
+        timestamp = int(time.time() * 1000)
+        unique_id = str(uuid.uuid4())[:8]
+        return f"ctx-{timestamp}-{unique_id}"
+    
+    def _is_context_expired(self, agent_name: str) -> bool:
+        """Check if a context has expired."""
+        if self.context_timestamps[agent_name] is None:
+            return True
+        
+        import time
+        context_time = self.context_timestamps[agent_name]
+        current_time = time.time()
+        hours_elapsed = (current_time - context_time) / 3600
+        
+        return hours_elapsed >= self.context_timeout_hours
+    
+    def _get_or_create_context_id(self, agent_name: str) -> str:
+        """Get existing context ID or create a new one if expired."""
+        if self.context_ids[agent_name] is None or self._is_context_expired(agent_name):
+            # Create new context
+            import time
+            self.context_ids[agent_name] = self._generate_context_id()
+            self.context_timestamps[agent_name] = time.time()
+            logger.info(f"🆕 Created new context for {agent_name}: {self.context_ids[agent_name]}")
+        else:
+            logger.debug(f"🔄 Reusing existing context for {agent_name}: {self.context_ids[agent_name]}")
+        
+        return self.context_ids[agent_name]
+    
+    def _clear_expired_context(self, agent_name: str):
+        """Clear expired context data."""
+        self.context_ids[agent_name] = None
+        self.context_timestamps[agent_name] = None
+        logger.info(f"🗑️  Cleared expired context for {agent_name}")
+    
+    async def _send_message_with_retry(self, agent_name: str, query: str, max_retries: int = 5) -> str:
+        """Send message with persistent retry logic for timeouts and empty responses (like SalesforceAgentManager)."""
+        for attempt in range(max_retries + 1):
+            try:
+                # Get current context ID (may be updated during retries)
+                context_id = self._get_or_create_context_id(agent_name)
+                
+                # Send message with current context
+                result = await self.agents[agent_name].send_message_a2a(
+                    query, self.basic_auth_header, context_id
+                )
+                
+                response_text = result.get("response", "")
+                
+                # Check if we got a meaningful response (not empty or generic)
+                if response_text and response_text.strip():
+                    # Check for generic/unhelpful responses that indicate agent confusion
+                    generic_responses = [
+                        "how can i help you",
+                        "how can i assist you", 
+                        "hi there",
+                        "hello",
+                        "what can i do for you"
+                    ]
+                    
+                    response_lower = response_text.lower()
+                    is_generic = any(generic in response_lower for generic in generic_responses)
+                    
+                    # If we got a meaningful, non-generic response, return it
+                    if not is_generic or len(response_text) > 50:  # Longer responses are likely meaningful
+                        logger.info(f"✅ Got meaningful response from {agent_name} on attempt {attempt + 1}")
+                        return response_text
+                    else:
+                        logger.warning(f"🔄 Got generic response from {agent_name}, retrying (attempt {attempt + 1}/{max_retries + 1})")
+                
+                # If empty response or generic response, retry
+                if attempt < max_retries:
+                    logger.warning(f"🔄 Empty or generic response from {agent_name}, retrying (attempt {attempt + 1}/{max_retries + 1})")
+                    # Wait a bit before retry to avoid overwhelming the agent
+                    await asyncio.sleep(1)
+                    continue
+                else:
+                    logger.error(f"❌ Failed to get meaningful response from {agent_name} after {max_retries + 1} attempts")
+                    return "Error: No meaningful response received after multiple attempts"
+                
+            except Exception as e:
+                error_message = str(e).lower()
+                
+                # Check for timeout errors (very common with Salesforce agents)
+                if "timeout" in error_message and attempt < max_retries:
+                    logger.info(f"🔄 Timeout for {agent_name} (attempt {attempt + 1}/{max_retries + 1}), retrying...")
+                    # Wait before retry for timeout
+                    await asyncio.sleep(2)
+                    continue
+                
+                # Check for context expiration error (500 with "not found (404)" like in SalesforceAgentManager)
+                if ("not found (404)" in error_message or "context" in error_message) and attempt < max_retries:
+                    logger.info(f"🔄 Context expired for {agent_name} (attempt {attempt + 1}/{max_retries + 1}), generating new context...")
+                    
+                    # Clear expired context and create new one
+                    self._clear_expired_context(agent_name)
+                    continue
+                
+                # For other errors, retry a few times before giving up
+                if attempt < max_retries:
+                    logger.warning(f"🔄 Retry {attempt + 1}/{max_retries + 1} for {agent_name}: {e}")
+                    await asyncio.sleep(1)
+                    continue
+                else:
+                    logger.error(f"❌ Failed after {max_retries + 1} attempts for {agent_name}: {e}")
+                    raise e
+        
+        return "Error: Failed to send message after retries"
     
     async def buscar_historico(self, query: str) -> str:
-        """Get client history from Salesforce via A2A protocol."""
+        """Get client history from Salesforce via A2A protocol with persistent context."""
         try:
             logger.info(f"🔧 A2A: Searching client history")
-            return await self.agents["buscar_historico"].send_simple_message(query, self.basic_auth_header)
+            return await self._send_message_with_retry("buscar_historico", query)
         except Exception as e:
             logger.error(f"❌ Error in buscar_historico: {e}")
             return f"Erro ao consultar histórico do cliente: {str(e)}"
     
     async def buscar_produto(self, query: str) -> str:
-        """Search for products in Salesforce via A2A protocol."""
+        """Search for products in Salesforce via A2A protocol with persistent context."""
         try:
             logger.info(f"🔧 A2A: Searching products")
-            return await self.agents["buscar_produto"].send_simple_message(query, self.basic_auth_header)
+            return await self._send_message_with_retry("buscar_produto", query)
         except Exception as e:
             logger.error(f"❌ Error in buscar_produto: {e}")
             return f"Erro ao buscar produtos: {str(e)}"
     
     async def oportunidades(self, query: str) -> str:
-        """Manage opportunities in Salesforce via A2A protocol."""
+        """Manage opportunities in Salesforce via A2A protocol with persistent context."""
         try:
             logger.info(f"🔧 A2A: Managing opportunities")
-            return await self.agents["oportunidades"].send_simple_message(query, self.basic_auth_header)
+            return await self._send_message_with_retry("oportunidades", query)
         except Exception as e:
             logger.error(f"❌ Error in oportunidades: {e}")
             return f"Erro ao gerenciar oportunidades: {str(e)}"

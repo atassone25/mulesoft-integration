@@ -23,9 +23,13 @@ async def data_and_ai(query: str) -> str:
         
         # Return the three specified products
         products = [
-            "Globo Reporter",
-            "Jornal Nacional", 
-            "Futebol"
+            "Viva São João - TV Rio Sul",
+            "Meu Paraná - RPC - 2024",
+            "Teste Homologação Lais",
+            "EPTV na Escola - Teste PPC - v1"
+            # "Globo Reporter",
+            # "Jornal Nacional", 
+            # "Futebol"
         ]
         
         response = "Produtos disponíveis no sistema Data and AI:\n"
