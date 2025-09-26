@@ -1,0 +1,36 @@
+DEPLOY AGENT ON AGENT ENGINE
+
+poetry run adk deploy agent_engine teams_agent \
+--project=gglobo-agentsb2b-hdg-dev \
+--region=us-central1 \
+--staging_bucket=gs://b2b-dev-vertex-agents \
+--display_name="Agente Oferta Contextualizada"
+
+
+CREATE A SESSION
+
+curl -X POST \
+-H "Authorization: Bearer $(gcloud auth print-access-token)" \
+-H "Content-Type: application/json" \
+https://us-central1-aiplatform.googleapis.com/v1/projects/gglobo-agentsb2b-hdg-dev/locations/us-central1/reasoningEngines/5098800455857733632:query \
+-d '{
+  "class_method": "create_session",
+  "input": {
+    "user_id": "u_123"
+  }
+}'
+
+INTERACT WITH AGENT
+
+curl -X POST \
+-H "Authorization: Bearer $(gcloud auth print-access-token)" \
+-H "Content-Type: application/json" \
+https://us-central1-aiplatform.googleapis.com/v1/projects/gglobo-agentsb2b-hdg-dev/locations/us-central1/reasoningEngines/5098800455857733632:streamQuery?alt=sse \
+-d '{
+  "class_method": "stream_query",
+  "input": {
+    "user_id": "u_123",
+    "session_id": "7601983262268850176",
+    "message": "Olá"
+  }
+}'

@@ -423,27 +423,29 @@ class SalesforceA2AClient:
     
     def __init__(self):
         """Initialize Salesforce A2A client with configuration."""
-        # Get configuration from environment
-        self.auth_username = os.getenv("A2A_AUTH_USERNAME")
-        self.auth_password = os.getenv("A2A_AUTH_PASSWORD")
+        # Get configuration from environment with fallbacks
+        self.auth_username = os.getenv("A2A_AUTH_USERNAME", "demo_user")
+        self.auth_password = os.getenv("A2A_AUTH_PASSWORD", "demo_pass")
         
         # Create auth token for Basic authentication (not Bearer)
         auth_string = f"{self.auth_username}:{self.auth_password}"
         auth_bytes = auth_string.encode('ascii')
         auth_token = base64.b64encode(auth_bytes).decode('ascii')
         
-        # Salesforce A2A agent endpoints - use Basic auth instead of Bearer
+        # Salesforce A2A agent endpoints with fallback URLs
+        default_base_url = "https://demo-a2a-agent.example.com"
+        
         self.agents = {
             "buscar_historico": A2AClient(
-                url=os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO"),
+                url=os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO", f"{default_base_url}/buscar_historico"),
                 auth_token=None  # We'll use Basic auth in headers instead
             ),
             "buscar_produto": A2AClient(
-                url=os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_PRODUTO"),
+                url=os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_PRODUTO", f"{default_base_url}/buscar_produto"),
                 auth_token=None  # We'll use Basic auth in headers instead
             ),
             "oportunidades": A2AClient(
-                url=os.getenv("SALESFORCE_A2A_AGENT_OPORTUNIDADES"),
+                url=os.getenv("SALESFORCE_A2A_AGENT_OPORTUNIDADES", f"{default_base_url}/oportunidades"),
                 auth_token=None  # We'll use Basic auth in headers instead
             )
         }

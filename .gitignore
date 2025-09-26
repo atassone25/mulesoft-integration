@@ -17,3 +17,6 @@ htmlcov/
 
 local
 agents_metadata.json
+
+# Frontend directory
+frontend/

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-ADK Agent Engine Deployment Script - Following official documentation
+ADK Datastore Agent Deployment Script - Following official documentation
 https://google.github.io/adk-docs/deploy/agent-engine/
+
+Simple agent for testing Vertex AI Search datastore connectivity.
 """
 
 import vertexai
@@ -22,25 +24,23 @@ load_dotenv()
 # Configuration from environment variables
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
 LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION") 
-STAGING_BUCKET = f"gs://b2b-dev-vertex-agents"  # You can also make this an env var if needed
+STAGING_BUCKET = f"gs://b2b-dev-vertex-agents"
 
 if not PROJECT_ID or not LOCATION:
     raise ValueError("GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION must be set in .env file")
 
 def get_agent():
-    """Import and return the existing agent from teams_agent module"""
-    # Import the existing coordinator agent directly
-    from teams_agent.agent import root_agent
-    logger.info(f"✓ Imported existing agent: {root_agent.name}")
+    """Import and return the datastore agent"""
+    from datastore_agent.agent import root_agent
+    logger.info(f"✓ Imported datastore agent: {root_agent.name}")
     logger.info(f"  Description: {root_agent.description}")
-    if root_agent.sub_agents:
-        logger.info(f"  Sub-agents: {[sa.name for sa in root_agent.sub_agents]}")
+    logger.info(f"  Tools: {[tool.name for tool in root_agent.tools]}")
     return root_agent
 
 def main():
-    """Deploy teams agent following ADK documentation standard deployment process"""
+    """Deploy datastore agent following ADK documentation standard deployment process"""
     
-    logger.info("Starting ADK standard deployment process...")
+    logger.info("Starting ADK datastore agent deployment...")
     logger.info(f"Project: {PROJECT_ID}")
     logger.info(f"Location: {LOCATION}")
     logger.info(f"Staging Bucket: {STAGING_BUCKET}")
@@ -55,7 +55,7 @@ def main():
         )
         logger.info("✓ Vertex AI initialized successfully")
         
-        # Step 2: Define your agent (import existing agent)
+        # Step 2: Define your agent (import datastore agent)
         logger.info("Step 2: Define your agent...")
         agent = get_agent()
         
@@ -65,7 +65,7 @@ def main():
         
         adk_app = reasoning_engines.AdkApp(
             agent=agent,
-            enable_tracing=True,
+            enable_tracing=True,  # Enable Google Cloud Trace
         )
         logger.info("✓ ADK App created with Cloud Trace enabled")
         
@@ -75,8 +75,8 @@ def main():
         
         from vertexai import agent_engines
         
-        # Read requirements from teams_agent/requirements.txt
-        requirements_file = "teams_agent/requirements.txt"
+        # Read requirements from datastore_agent/requirements.txt
+        requirements_file = "datastore_agent/requirements.txt"
         requirements = []
         try:
             with open(requirements_file, 'r') as f:
@@ -86,14 +86,12 @@ def main():
             logger.warning(f"⚠️ Requirements file {requirements_file} not found, using minimal requirements")
             requirements = ["google-cloud-aiplatform[adk,agent_engines]"]
         
-        # Prepare environment variables for deployment
-        # Note: GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION are automatically set by Agent Engine
+        # Prepare environment variables for deployment (same as teams_agent)
         env_vars = {
-            "ADK_MODEL": os.getenv("ADK_MODEL", "gemini-2.0-flash"),
+            "MODEL": os.getenv("MODEL", "gemini-2.0-flash"),
             "ADK_ENV": os.getenv("ADK_ENV", "dev"),
-            "USE_VERTEX_MEMORY": os.getenv("USE_VERTEX_MEMORY", "TRUE"),
-            "AGENT_ENGINE_ID": os.getenv("AGENT_ENGINE_ID"),
-            # A2A Configuration
+            "USE_VERTEX_MEMORY": os.getenv("USE_VERTEX_MEMORY", "FALSE"),  # Disabled for simple agent
+            # A2A Configuration (keep same env vars available)
             "SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO": os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_HISTORICO"),
             "SALESFORCE_A2A_AGENT_BUSCAR_PRODUTO": os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_PRODUTO"),
             "SALESFORCE_A2A_AGENT_OPORTUNIDADES": os.getenv("SALESFORCE_A2A_AGENT_OPORTUNIDADES"),
@@ -110,53 +108,53 @@ def main():
         
         remote_app = agent_engines.create(
             agent_engine=adk_app,
-            display_name="Agentic Oferta Contextualizada",
-            description="Multi-agent system for business opportunities using ADK with A2A protocol integration",
+            display_name="Datastore Test Agent",
+            description="Simple agent for testing Vertex AI Search datastore connectivity (ma014-datastore-oferta_b2b)",
             requirements=requirements,
             env_vars=env_vars
         )
         
-        logger.info("✅ Agent deployed successfully!")
+        logger.info("✅ Datastore agent deployed successfully!")
         logger.info(f"Resource Name: {remote_app.resource_name}")
         
         print("\n" + "="*70)
-        print("🎉 DEPLOYMENT SUCCESSFUL!")
+        print("🎉 DATASTORE AGENT DEPLOYMENT SUCCESSFUL!")
         print("="*70)
-        print(f"Agent Name: Accenture-Mulesoft Teams Agent (Full)")
+        print(f"Agent Name: Datastore Test Agent")
         print(f"Resource Name: {remote_app.resource_name}")
         print(f"Project: {PROJECT_ID}")
         print(f"Location: {LOCATION}")
         print(f"Staging Bucket: {STAGING_BUCKET}")
         print(f"Cloud Trace: ✅ ENABLED")
-        print(f"Sub-agents: ContextualizedOfferAgent, OpportunityAgent")
-        print(f"A2A Integration: ✅ ENABLED")
+        print(f"Datastore: ma014-datastore-oferta_b2b")
+        print(f"Tools: Vertex AI Search")
         print("="*70)
         
         # Test the deployed agent
-        logger.info("Testing deployed agent...")
+        logger.info("Testing deployed datastore agent...")
         try:
             # Create a test session
             test_session = remote_app.create_session(user_id="test_user")
             logger.info(f"✓ Test session created: {test_session['id']}")
             
-            # Send a simple test message
-            logger.info("Sending test message...")
+            # Send a simple test message to test datastore connectivity
+            logger.info("Sending test message to search datastore...")
             response_events = list(remote_app.stream_query(
                 user_id="test_user",
                 session_id=test_session["id"],
-                message="Hello, I need help creating a contextualized offer for a client. Can you show me the available services?"
+                message="Search for any B2B offers or products available in the datastore"
             ))
             
             if response_events:
-                logger.info("✓ Agent responded successfully!")
-                print(f"\n✅ Test successful - Agent is responding correctly!")
+                logger.info("✓ Datastore agent responded successfully!")
+                print(f"\n✅ Test successful - Datastore connection working!")
                 
                 # Show the response
                 for event in response_events:
                     if event.get('parts'):
                         for part in event['parts']:
                             if part.get('text'):
-                                print(f"Agent response: {part['text'][:200]}...")
+                                print(f"Agent response: {part['text'][:300]}...")
                                 break
             else:
                 logger.warning("⚠️ Agent deployed but test response was empty")
@@ -181,14 +179,14 @@ if __name__ == "__main__":
         print(f"\n📋 Save this resource name for future reference:")
         print(f"   {deployed_app.resource_name}")
         print(f"\n💡 Next steps:")
-        print(f"   1. Test your agent in the Vertex AI console")
+        print(f"   1. Test datastore queries in the Vertex AI console")
         print(f"   2. View traces in Cloud Trace: https://console.cloud.google.com/traces/list?project={PROJECT_ID}")
-        print(f"   3. Test contextualized offer creation workflow")
-        print(f"   4. Test opportunity registration functionality")
-        print(f"   5. Monitor A2A protocol interactions in logs")
+        print(f"   3. Try different search queries to test datastore connectivity")
+        print(f"   4. Monitor search performance and results")
+        print(f"   5. Verify Vertex AI Search tool is working correctly")
     else:
         print(f"\n❌ Deployment failed. Check the logs above for details.")
         print(f"   Common issues:")
-        print(f"   - Missing dependencies in sub-agents")
-        print(f"   - Complex async operations that don't serialize well")
-        print(f"   - Import errors in sub-modules")
+        print(f"   - Incorrect datastore ID or permissions")
+        print(f"   - Missing Vertex AI Search API enablement")
+        print(f"   - Network connectivity issues")

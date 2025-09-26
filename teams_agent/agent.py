@@ -9,8 +9,8 @@ from __future__ import annotations
 import os
 from google.adk.agents import Agent
 from google.adk.agents.callback_context import CallbackContext
-from google.adk.memory import InMemoryMemoryService, VertexAiMemoryBankService
-from google.adk.tools import load_memory
+# from google.adk.memory import InMemoryMemoryService, VertexAiMemoryBankService
+# from google.adk.tools import load_memory
 from google.genai import types
 from typing import Optional
 
@@ -32,39 +32,39 @@ logger = logging.getLogger(__name__)
 
 # ---- Memory service configuration ----
 # Based on ADK documentation: https://google.github.io/adk-docs/sessions/memory/
-def _build_memory_service():
-    """Build memory service based on environment configuration."""
-    use_vertex = os.getenv("USE_VERTEX_MEMORY", "").lower() in ("1", "true", "yes")
+# def _build_memory_service():
+#     """Build memory service based on environment configuration."""
+#     use_vertex = os.getenv("USE_VERTEX_MEMORY", "").lower() in ("1", "true", "yes")
     
-    if not use_vertex:
-        logger.info("Using InMemoryMemoryService (USE_VERTEX_MEMORY not enabled)")
-        return InMemoryMemoryService()
+#     if not use_vertex:
+#         logger.info("Using InMemoryMemoryService (USE_VERTEX_MEMORY not enabled)")
+#         return InMemoryMemoryService()
 
-    project = os.getenv("GOOGLE_CLOUD_PROJECT")
-    location = os.getenv("GOOGLE_CLOUD_LOCATION")
-    agent_engine_id = os.getenv("AGENT_ENGINE_ID")
+#     project = os.getenv("GOOGLE_CLOUD_PROJECT")
+#     location = os.getenv("GOOGLE_CLOUD_LOCATION")
+#     agent_engine_id = os.getenv("AGENT_ENGINE_ID")
 
-    if not (project and location and agent_engine_id):
-        logger.warning(
-            f"Missing required environment variables for VertexAiMemoryBankService: "
-            f"GOOGLE_CLOUD_PROJECT={project}, GOOGLE_CLOUD_LOCATION={location}, "
-            f"AGENT_ENGINE_ID={agent_engine_id}. Falling back to InMemoryMemoryService."
-        )
-        return InMemoryMemoryService()
+#     if not (project and location and agent_engine_id):
+#         logger.warning(
+#             f"Missing required environment variables for VertexAiMemoryBankService: "
+#             f"GOOGLE_CLOUD_PROJECT={project}, GOOGLE_CLOUD_LOCATION={location}, "
+#             f"AGENT_ENGINE_ID={agent_engine_id}. Falling back to InMemoryMemoryService."
+#         )
+#         return InMemoryMemoryService()
 
-    try:
-        logger.info(f"Initializing VertexAiMemoryBankService with project={project}, location={location}, agent_engine_id={agent_engine_id}")
-        return VertexAiMemoryBankService(
-            project=project,
-            location=location,
-            agent_engine_id=agent_engine_id,
-        )
-    except Exception as e:
-        logger.error(f"Failed to initialize VertexAiMemoryBankService: {e}. Falling back to InMemoryMemoryService.")
-        return InMemoryMemoryService()
+#     try:
+#         logger.info(f"Initializing VertexAiMemoryBankService with project={project}, location={location}, agent_engine_id={agent_engine_id}")
+#         return VertexAiMemoryBankService(
+#             project=project,
+#             location=location,
+#             agent_engine_id=agent_engine_id,
+#         )
+#     except Exception as e:
+#         logger.error(f"Failed to initialize VertexAiMemoryBankService: {e}. Falling back to InMemoryMemoryService.")
+#         return InMemoryMemoryService()
 
-# Memory service instance - this will be used by the Runner
-MEMORY_SERVICE = _build_memory_service()
+# # Memory service instance - this will be used by the Runner
+# MEMORY_SERVICE = _build_memory_service()
 
 
 # ---- Model + sub-agents ----
@@ -88,7 +88,7 @@ coordinator_agent = Agent(
     description="Coordinate decisions about business opportunities and handle team communication",
     instruction=prompt.COORDINATOR_PROMPT,
     sub_agents=SUB_AGENTS,
-    tools=[load_memory],  # Add memory search capability
+    # tools=[load_memory],  # Add memory search capability
 )
 
 # Expose as entry point
