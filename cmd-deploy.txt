@@ -6,6 +6,13 @@ poetry run adk deploy agent_engine teams_agent \
 --staging_bucket=gs://b2b-dev-vertex-agents \
 --display_name="Agente Oferta Contextualizada"
 
+or
+
+poetry run adk deploy agent_engine datastore_agent \
+--project=gglobo-agentsb2b-hdg-dev \
+--region=us-central1 \
+--staging_bucket=gs://b2b-dev-vertex-agents \
+--display_name="Datastore Search Agent"
 
 CREATE A SESSION
 
