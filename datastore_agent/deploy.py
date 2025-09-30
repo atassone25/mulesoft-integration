@@ -108,7 +108,7 @@ def main():
         
         remote_app = agent_engines.create(
             agent_engine=adk_app,
-            display_name="Datastore Test Agent",
+            display_name="Datastore Test Agent V4",
             description="Simple agent for testing Vertex AI Search datastore connectivity (ma014-datastore-oferta_b2b)",
             requirements=requirements,
             env_vars=env_vars

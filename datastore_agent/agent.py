@@ -23,13 +23,13 @@ logger = logging.getLogger(__name__)
 ADK_MODEL = os.getenv("MODEL", "gemini-2.0-flash")
 
 # DataStore configuration
-DATASTORE_ID = "projects/205867137421/locations/us/collections/default_collection/dataStores/ma014-datastore-oferta_b2b"
+# DATASTORE_ID = "projects/205867137421/locations/us/collections/default_collection/dataStores/ma014-datastore-oferta_b2b"
+DATASTORE_ID = "projects/205867137421/locations/us/collections/default_collection/dataStores/ma014-datastore-develop-oferta_b2b"
 
-# Create Vertex AI Search tool
+# Create Vertex AI Search tool using built-in tool with regular Agent class
 logger.info(f"Initializing Vertex AI Search tool with datastore: {DATASTORE_ID}")
 
-# Initialize the Vertex AI Search tool following ADK documentation
-# https://google.github.io/adk-docs/tools/built-in-tools/#vertex-ai-search
+# Initialize the Vertex AI Search tool 
 datastore_search_tool = VertexAiSearchTool(
     data_store_id=DATASTORE_ID
 )
@@ -52,7 +52,7 @@ Use the Vertex AI Search tool to find relevant information and provide helpful r
 Always be clear about what information you found and provide specific details from the search results.
 """
 
-# Create the datastore agent
+# Create the datastore agent using regular Agent class (like working teams_agent)
 datastore_agent = Agent(
     model=ADK_MODEL,
     name="datastore_agent", 
