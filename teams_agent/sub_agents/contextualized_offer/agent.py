@@ -25,7 +25,12 @@ RESPONSE FORMAT AFTER FETCHING PRODUCTS:
 "I found the following products from the Data & AI system:
 [list the products clearly]
 
-Would you like to proceed with these products for verification? Please respond with 'yes' to continue or 'no' if you'd like to modify the search."
+You have three options:
+1. 'verify' - Proceed with product verification using Salesforce
+2. 'offer' - Create contextualized offer directly with these products (skip verification)
+3. 'no' - Modify the search
+
+Please respond with 'verify', 'offer', or 'no'."
 
 Do NOT automatically proceed to the next step. ALWAYS wait for user confirmation.
 """
@@ -79,7 +84,9 @@ CRITICAL USER CONFIRMATION LOGIC:
 
 8. If NO products were found (neither original nor alternatives):
    - Inform the user that no products could be verified
-   - Ask for guidance on how to proceed
+   - Offer the option to proceed with the original unverified products from ProductFetcherAgent
+   - Format: "I could not verify any products through Salesforce. However, you can still proceed with the original products from the Data & AI system: [list original products]. Would you like to: 'original' - Use original unverified products for the offer, 'search' - Try a different product search, or 'cancel' - Cancel the offer creation?"
+   - Wait for user confirmation before proceeding
 
 RESPONSE ANALYSIS GUIDE (STRICT):
 - Generic responses like "How can I help you?" or "How can I assist you today?" = Reply asking for query products
@@ -106,9 +113,11 @@ product_verifier_agent = Agent(
 )
 
 OFFER_GENERATOR_PROMPT = """You are a Contextualized Offer Generator Agent.
-Your task is to create personalized business offers using the verified product information.
+Your task is to create personalized business offers using product information from either the ProductVerifierAgent or directly from the ProductFetcherAgent.
 
-Look for verified product information in the conversation history from the ProductVerifierAgent.
+**Product Information Sources:** Look for product information in the conversation history from:
+1. ProductVerifierAgent (verified products with Salesforce details)
+2. ProductFetcherAgent (unverified products from Data & AI system)
 
 **Original User Request Context:** Use the original user query to understand:
 - Client name
@@ -117,10 +126,19 @@ Look for verified product information in the conversation history from the Produ
 
 MANDATORY REQUIREMENTS:
 1. NEVER create offers without client name, strategy, and investment amount from the user's request
-2. Use ONLY the verified products from the previous agent
+2. Use products from either:
+   - VERIFIED products from ProductVerifierAgent (preferred when available)
+   - UNVERIFIED products from ProductFetcherAgent (when verification was skipped or failed)
 3. Create personalized offers that match the client's strategy and investment
-4. Include specific verified products in the final offer
-5. Reference the verification results to show due diligence
+4. Include specific products in the final offer
+5. Clearly indicate in the offer whether products are:
+   - "Verified through Salesforce" (if from ProductVerifierAgent)
+   - "From Data & AI system (unverified)" (if directly from ProductFetcherAgent)
+
+OFFER TRANSPARENCY:
+- Always be transparent about the verification status of products
+- For verified products: Reference the verification results to show due diligence
+- For unverified products: Note that products are from the Data & AI system and recommend verification before final implementation
 
 If the user hasn't provided client name, strategy, and investment amount, ask for this information.
 """
@@ -148,14 +166,22 @@ Your role is to coordinate the creation of personalized business offers through 
 WORKFLOW PROCESS:
 1. **Initial Information Gathering**: Ensure you have client name, strategy, and investment amount
 2. **Product Fetching**: Delegate to ProductFetcherAgent to get products and wait for user confirmation
-3. **Product Verification**: After user confirms, delegate to ProductVerifierAgent for verification and wait for user confirmation  
-4. **Offer Generation**: After user confirms verified products, delegate to OfferGeneratorAgent to create the final offer
+3. **Product Verification OR Direct Offer**: Based on user choice:
+   - If user chooses 'verify': delegate to ProductVerifierAgent for verification and wait for user confirmation
+   - If user chooses 'offer': skip verification and delegate directly to OfferGeneratorAgent
+4. **Offer Generation**: Create final offer with either verified or unverified products based on user's path
 
 DELEGATION RULES:
 - Start with ProductFetcherAgent when user requests contextualized offer: use transfer_to_agent(agent_name="ProductFetcherAgent")
-- Only proceed to ProductVerifierAgent after user confirms they want to proceed with fetched products: use transfer_to_agent(agent_name="ProductVerifierAgent")
-- Only proceed to OfferGeneratorAgent after user confirms they want to proceed with verified products: use transfer_to_agent(agent_name="OfferGeneratorAgent")
-- If user says "no" at any confirmation step, ask them what they would like to do instead
+- After ProductFetcherAgent presents products:
+  * If user responds 'verify': use transfer_to_agent(agent_name="ProductVerifierAgent")
+  * If user responds 'offer': use transfer_to_agent(agent_name="OfferGeneratorAgent")
+  * If user responds 'no': ask what they would like to do instead
+- After ProductVerifierAgent (if used):
+  * If user confirms verified/alternative products: use transfer_to_agent(agent_name="OfferGeneratorAgent")
+  * If user chooses 'original' (unverified): use transfer_to_agent(agent_name="OfferGeneratorAgent")
+  * If user chooses 'search': use transfer_to_agent(agent_name="ProductFetcherAgent")
+- If user says "cancel" at any step, end the process gracefully
 
 MANDATORY REQUIREMENTS:
 - NEVER create offers without client name, strategy, and investment amount

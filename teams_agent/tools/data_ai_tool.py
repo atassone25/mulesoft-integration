@@ -13,7 +13,7 @@ import json
 logger = logging.getLogger(__name__)
 
 # Use the working datastore_agent as a service
-DATASTORE_AGENT_ID = "7138297768358969344"  # The successfully deployed datastore_agent
+DATASTORE_AGENT_ID = "7994544647512784896"
 PROJECT_ID = "gglobo-agentsb2b-hdg-dev"
 LOCATION = "us-central1"
 
