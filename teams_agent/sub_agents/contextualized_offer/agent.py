@@ -52,7 +52,7 @@ When you receive a request, look for product names in the conversation history o
 MANDATORY ACTIONS:
 1. Extract all product names from the conversation history or context (look for products mentioned by ProductFetcherAgent or user)
 2. Use the buscar_produto tool with ALL products in a SINGLE query using comma-separated format:
-   - Format: "Buscar produtos: [Product1], [Product2], [Product3]"
+   - Format: "Buscar produtos: [idsProdutos=Product1], [idsProdutos=Product2], [idsProdutos=Product3]"
    - Example: "Buscar produtos: Globo Reporter, Jornal Nacional, Futebol"
    - If the first query doesn't return product details, try alternative formats or individual product searches
 3. The A2A agent expects this comma-separated format and will provide verification for all products at once

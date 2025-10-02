@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configuration from environment variables
-ADK_MODEL = os.getenv("MODEL", "gemini-2.0-flash")
+ADK_MODEL = os.getenv("MODEL", "gemini-2.5-flash")
 
 # DataStore configuration
 # DATASTORE_ID = "projects/205867137421/locations/us/collections/default_collection/dataStores/ma014-datastore-oferta_b2b"
