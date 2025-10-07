@@ -13,7 +13,7 @@ import json
 logger = logging.getLogger(__name__)
 
 # Use the working datastore_agent as a service
-DATASTORE_AGENT_ID = "1457569788384509952" # Datastore Search Agent V3
+DATASTORE_AGENT_ID = "8741719973191221248" # Datastore Search Agent V5
 PROJECT_ID = "gglobo-agentsb2b-hdg-dev"
 LOCATION = "us-central1"
 
@@ -67,13 +67,15 @@ async def data_and_ai(query: str) -> str:
         session_id = session_data["output"]["id"]
         
         # Query the datastore agent using stream_query
+        # Note: The datastore agent expects queries with product attributes and criteria
+        # We pass the query directly to let the datastore agent extract keywords
         query_url = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/reasoningEngines/{DATASTORE_AGENT_ID}:streamQuery?alt=sse"
         query_payload = {
             "class_method": "stream_query", 
             "input": {
                 "user_id": "data_ai_tool",
                 "session_id": session_id,
-                "message": f"Search for B2B offers and products related to: {query}"
+                "message": f"Buscar produtos com os seguintes critérios: {query}"
             }
         }
         

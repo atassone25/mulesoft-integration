@@ -12,7 +12,7 @@ poetry run adk deploy agent_engine datastore_agent \
 --project=gglobo-agentsb2b-hdg-dev \
 --region=us-central1 \
 --staging_bucket=gs://b2b-dev-vertex-agents \
---display_name="Datastore Search Agent V4"
+--display_name="Datastore Search Agent V5"
 
 CREATE A SESSION
 

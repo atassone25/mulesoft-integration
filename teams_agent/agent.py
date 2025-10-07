@@ -68,7 +68,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---- Model + sub-agents ----
-ADK_MODEL = os.getenv("MODEL", "gemini-2.0-flash")
+ADK_MODEL = os.getenv("MODEL", "gemini-2.5-flash")
 
 SUB_AGENTS = [contextualized_offer_agent]
 
