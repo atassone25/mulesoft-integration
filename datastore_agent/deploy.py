@@ -88,7 +88,7 @@ def main():
         
         # Prepare environment variables for deployment (same as teams_agent)
         env_vars = {
-            "MODEL": os.getenv("MODEL", "gemini-2.0-flash"),
+            "MODEL": os.getenv("MODEL", "gemini-2.5-flash"),
             "ADK_ENV": os.getenv("ADK_ENV", "dev"),
             "USE_VERTEX_MEMORY": os.getenv("USE_VERTEX_MEMORY", "FALSE"),  # Disabled for simple agent
             # A2A Configuration (keep same env vars available)
@@ -108,7 +108,7 @@ def main():
         
         remote_app = agent_engines.create(
             agent_engine=adk_app,
-            display_name="Datastore Test Agent V4",
+            display_name="Datastore Test Agent Test",
             description="Simple agent for testing Vertex AI Search datastore connectivity (ma014-datastore-oferta_b2b)",
             requirements=requirements,
             env_vars=env_vars
