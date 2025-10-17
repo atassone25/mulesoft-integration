@@ -2,25 +2,35 @@
 import logging
 import os
 import asyncio
-import aiohttp
-import base64
+import httpx
 import uuid
+import base64
 from google.adk.tools import FunctionTool
+from dotenv import load_dotenv
+
+# Load .env from parent mulesoft-integration directory
+env_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
+load_dotenv(env_path)
 
 logger = logging.getLogger(__name__)
 
 # Configuration from environment
-SALESFORCE_BUSCAR_PRODUTO_URL = os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_PRODUTO", "http://localhost:10002")
-A2A_AUTH_USERNAME = os.getenv("A2A_AUTH_USERNAME", "demo_user")
-A2A_AUTH_PASSWORD = os.getenv("A2A_AUTH_PASSWORD", "demo_pass")
+SALESFORCE_BUSCAR_PRODUTO_URL = os.getenv("SALESFORCE_A2A_AGENT_BUSCAR_PRODUTO")
+
+# A2A authentication (Basic auth) - Required by MuleSoft endpoint
+AUTH_USERNAME = os.getenv("A2A_AUTH_USERNAME")
+AUTH_PASSWORD = os.getenv("A2A_AUTH_PASSWORD")
 
 # Create Basic auth header
-auth_string = f"{A2A_AUTH_USERNAME}:{A2A_AUTH_PASSWORD}"
-auth_bytes = auth_string.encode('ascii')
-auth_token = base64.b64encode(auth_bytes).decode('ascii')
-BASIC_AUTH_HEADER = f'Basic {auth_token}'
-
-logger.info(f"Salesforce Search Tool configured with URL: {SALESFORCE_BUSCAR_PRODUTO_URL}")
+if AUTH_USERNAME and AUTH_PASSWORD:
+    auth_string = f"{AUTH_USERNAME}:{AUTH_PASSWORD}"
+    auth_bytes = auth_string.encode('ascii')
+    auth_token = base64.b64encode(auth_bytes).decode('ascii')
+    BASIC_AUTH_HEADER = f'Basic {auth_token}'
+    logger.info(f"Salesforce Search Tool configured with URL: {SALESFORCE_BUSCAR_PRODUTO_URL} (authenticated)")
+else:
+    BASIC_AUTH_HEADER = None
+    logger.warning(f"Salesforce Search Tool configured without authentication - this may cause errors!")
 
 # Context management for persistent conversations
 _context_id = None
@@ -97,62 +107,87 @@ async def _send_message_with_retry(query: str, max_retries: int = 5) -> str:
                 }
             }
             
+            # Headers with Basic authentication (required by MuleSoft)
             headers = {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': BASIC_AUTH_HEADER
+                'Accept': 'application/json'
             }
             
-            async with aiohttp.ClientSession() as session:
-                async with session.post(SALESFORCE_BUSCAR_PRODUTO_URL, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=60)) as response:
-                    if response.status == 200:
-                        result = await response.json()
+            # Add authentication header if configured
+            if BASIC_AUTH_HEADER:
+                headers['Authorization'] = BASIC_AUTH_HEADER
+            else:
+                logger.warning("⚠️  No authentication configured - request may fail!")
+            
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                logger.debug(f"Sending request to Salesforce: {SALESFORCE_BUSCAR_PRODUTO_URL}")
+                response = await client.post(SALESFORCE_BUSCAR_PRODUTO_URL, headers=headers, json=payload)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    
+                    # Check for JSON-RPC error
+                    if "error" in result:
+                        logger.error(f"❌ A2A JSON-RPC error: {result['error']}")
+                        raise Exception(f"A2A error: {result['error']}")
+                    
+                    # Extract the agent's response
+                    response_text = "No response received from agent"
+                    if 'result' in result and 'status' in result['result'] and 'message' in result['result']['status']:
+                        agent_message = result['result']['status']['message']
+                        if 'parts' in agent_message and agent_message['parts']:
+                            response_text = agent_message['parts'][0].get('text', '')
+                    
+                    # Check if we got a meaningful response
+                    if response_text and response_text.strip():
+                        # Check for generic/unhelpful responses and confirmation questions
+                        generic_responses = [
+                            "how can i help you",
+                            "how can i assist you", 
+                            "hi there",
+                            "hello",
+                            "what can i do for you"
+                        ]
                         
-                        # Check for JSON-RPC error
-                        if "error" in result:
-                            logger.error(f"❌ A2A JSON-RPC error: {result['error']}")
-                            raise Exception(f"A2A error: {result['error']}")
+                        # Check for confirmation questions (agent asking for clarification)
+                        confirmation_patterns = [
+                            "could you confirm",
+                            "can you confirm",
+                            "please confirm",
+                            "is this the product you want",
+                            "if there are additional products"
+                        ]
                         
-                        # Extract the agent's response
-                        response_text = "No response received from agent"
-                        if 'result' in result and 'status' in result['result'] and 'message' in result['result']['status']:
-                            agent_message = result['result']['status']['message']
-                            if 'parts' in agent_message and agent_message['parts']:
-                                response_text = agent_message['parts'][0].get('text', '')
+                        response_lower = response_text.lower()
+                        is_generic = any(generic in response_lower for generic in generic_responses)
+                        is_confirmation = any(pattern in response_lower for pattern in confirmation_patterns)
                         
-                        # Check if we got a meaningful response
-                        if response_text and response_text.strip():
-                            # Check for generic/unhelpful responses
-                            generic_responses = [
-                                "how can i help you",
-                                "how can i assist you", 
-                                "hi there",
-                                "hello",
-                                "what can i do for you"
-                            ]
-                            
-                            response_lower = response_text.lower()
-                            is_generic = any(generic in response_lower for generic in generic_responses)
-                            
-                            # If we got a meaningful, non-generic response, return it
-                            if not is_generic or len(response_text) > 50:
-                                logger.info(f"✅ Got meaningful response from Salesforce on attempt {attempt + 1}")
-                                return response_text
-                            else:
-                                logger.warning(f"🔄 Got generic response from Salesforce, retrying (attempt {attempt + 1}/{max_retries + 1})")
+                        # If it's a confirmation question and we're early in attempts, accept it
+                        # (the agent might need clarification from upstream)
+                        if is_confirmation and attempt == 0:
+                            logger.info(f"✅ Got confirmation request from Salesforce on attempt {attempt + 1}")
+                            return response_text
                         
-                        # If empty or generic response, retry
-                        if attempt < max_retries:
-                            logger.warning(f"🔄 Empty or generic response from Salesforce, retrying (attempt {attempt + 1}/{max_retries + 1})")
-                            await asyncio.sleep(1)
-                            continue
+                        # If we got a meaningful, non-generic response, return it
+                        if not is_generic or len(response_text) > 50:
+                            logger.info(f"✅ Got meaningful response from Salesforce on attempt {attempt + 1}")
+                            return response_text
                         else:
-                            logger.error(f"❌ Failed to get meaningful response from Salesforce after {max_retries + 1} attempts")
-                            return "Error: No meaningful response received after multiple attempts"
+                            logger.warning(f"🔄 Got generic response from Salesforce, retrying (attempt {attempt + 1}/{max_retries + 1})")
+                    
+                    # If empty or generic response, retry
+                    if attempt < max_retries:
+                        logger.warning(f"🔄 Empty or generic response from Salesforce, retrying (attempt {attempt + 1}/{max_retries + 1})")
+                        await asyncio.sleep(1)
+                        continue
                     else:
-                        error_text = await response.text()
-                        logger.error(f"❌ A2A message/send failed: HTTP {response.status}")
-                        raise Exception(f"Failed to send message: {error_text}")
+                        logger.error(f"❌ Failed to get meaningful response from Salesforce after {max_retries + 1} attempts")
+                        return "Error: No meaningful response received after multiple attempts"
+                else:
+                    error_text = response.text
+                    logger.error(f"❌ A2A message/send failed: HTTP {response.status_code}")
+                    logger.error(f"Error details: {error_text}")
+                    raise Exception(f"Failed to send message: HTTP {response.status_code}")
                         
         except asyncio.TimeoutError as e:
             # Check for timeout errors
@@ -199,8 +234,17 @@ async def salesforce_search(query: str) -> str:
         return "Please provide product names or specifications to search."
 
     try:
-        logger.info(f"🔍 Salesforce Search: {text[:100]}{'...' if len(text) > 100 else ''}")
-        response = await _send_message_with_retry(text)
+        # Format query with explicit search intent (like working test examples)
+        # The Salesforce agent expects queries with action verbs like "Buscar"
+        if not any(keyword in text.lower() for keyword in ['buscar', 'verificar', 'procurar', 'pesquisar', 'listar']):
+            # Add explicit search prefix to make intent clear
+            formatted_query = f"Buscar produto: {text}"
+            logger.debug(f"Added search prefix to query: {formatted_query}")
+        else:
+            formatted_query = text
+        
+        logger.info(f"🔍 Salesforce Search: {formatted_query[:100]}{'...' if len(formatted_query) > 100 else ''}")
+        response = await _send_message_with_retry(formatted_query)
         logger.info(f"✅ Salesforce search completed")
         return response
             
@@ -210,4 +254,3 @@ async def salesforce_search(query: str) -> str:
 
 # Create ADK FunctionTool instance
 salesforce_search_tool = FunctionTool(func=salesforce_search)
-

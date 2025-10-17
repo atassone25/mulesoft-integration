@@ -1,6 +1,6 @@
 DEPLOY AGENT ON AGENT ENGINE
 
-poetry run adk deploy agent_engine teams_agent \
+poetry run adk deploy agent_engine teams_agent_a2a \
 --project=gglobo-agentsb2b-hdg-dev \
 --region=us-central1 \
 --staging_bucket=gs://b2b-dev-vertex-agents \
